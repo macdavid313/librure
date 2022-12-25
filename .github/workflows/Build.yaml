@@ -19,6 +19,12 @@ jobs:
             target: aarch64-unknown-linux-gnu
 
           - os: ubuntu-20.04
+            target: i686-unknown-freebsd
+
+          - os: ubuntu-20.04
+            target: x86_64-unknown-freebsd
+
+          - os: ubuntu-20.04
             target: sparcv9-sun-solaris
 
           - os: ubuntu-20.04
@@ -56,7 +62,7 @@ jobs:
         uses: actions-rs/install@v0.1
         with:
           crate: cross
-          version: 0.2.4
+          version: https://github.com/cross-rs/cross
           use-tool-cache: true
 
       - name: Set up regexp repo
