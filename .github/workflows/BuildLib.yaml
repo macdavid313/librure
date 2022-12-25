@@ -1,0 +1,62 @@
+name: Build Shared Libraries
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  buildLibs:
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, windows-2022, macos-12]
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      RURE_VERSION: 1.7.0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        if: matrix.os == 'ubuntu-20.04'
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install cross
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: cross
+
+      - name: Set up regexp repo
+        run: |
+          git clone -b ${RURE_VERSION} https://github.com/rust-lang/regex.git
+        shell: bash
+
+      - name: Build librure shared library
+        run: |
+          cd regex/regex-capi
+          case "$RUNNER_OS" in
+            "Linux")
+              TARGETS="i686-unknown-linux-gnu x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu"
+              CARGO=cross
+              ;;
+            "macOS")
+              TARGETS="aarch64-apple-darwin x86_64-apple-darwin"
+              CARGO=cargo
+              ;;
+            "Windows")
+              TARGETS="i686-pc-windows-msvc x86_64-pc-windows-msvc"
+              CARGO=cargo
+              ;;
+            *)
+              ;;
+          esac
+          echo ${TARGETS} | xargs -d ' ' -P1 -I{} ${CARGO} build --release --target {}
+          echo "All done"
+        shell: bash
