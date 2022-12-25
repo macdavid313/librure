@@ -52,13 +52,6 @@ jobs:
         if: matrix.os == 'ubuntu-20.04'
         uses: docker/setup-qemu-action@v2
 
-      - name: Set up cache
-        if: matrix.os == 'ubuntu-20.04'
-        uses: actions/cache@v3
-        with:
-          path: $HOME/.cargo/bin
-          key: ${{ matrix.os }}
-
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -67,8 +60,11 @@ jobs:
 
       - name: Install cross
         if: matrix.os == 'ubuntu-20.04'
-        run: |
-          cargo install cross --git https://github.com/cross-rs/cross
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cross
+          version: latest
+          use-tool-cache: true
 
       - name: Set up regexp repo
         run: |
