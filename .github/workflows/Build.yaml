@@ -1,4 +1,4 @@
-name: Build Shared Libraries
+name: Build and publish librure
 
 on:
   push:
@@ -60,6 +60,8 @@ jobs:
         run: |
           curl -L https://github.com/rust-lang/regex/archive/f871a8e.tar.gz | tar xz
           mv regex-* regex
+          cp Cross.toml regex/
+          cp Cross.toml regex/regex-capi/
         shell: bash
 
       - name: Build librure shared library
