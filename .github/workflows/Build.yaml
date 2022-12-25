@@ -19,6 +19,9 @@ jobs:
             target: aarch64-unknown-linux-gnu
 
           - os: ubuntu-20.04
+            target: sparcv9-sun-solaris
+
+          - os: ubuntu-20.04
             target: x86_64-sun-solaris
 
           - os: macos-12
