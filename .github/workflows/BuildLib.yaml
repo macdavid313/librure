@@ -15,6 +15,9 @@ jobs:
           - os: ubuntu-20.04
             target: x86_64-unknown-linux-gnu
 
+          - os: ubuntu-20.04
+            target: aarch64-unknown-linux-gnu
+
           - os: macos-12
             target: aarch64-apple-darwin
 
@@ -57,15 +60,35 @@ jobs:
 
       - name: Build librure shared library
         run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            CARGO=cross
+          else
+            CARGO=cargo
+            rustup target add ${{ matrix.target }}
+          fi
           cd regex/regex-capi
-          case "$RUNNER_OS" in
-            "Linux")
-              CARGO=cross
-              ;;
-            *)
-              CARGO=cargo
-              rustup target add ${{ matrix.target }}
-              ;;
-          esac
           ${CARGO} build --release --target ${{ matrix.target }}
         shell: bash
+
+      - name: Make artifacts
+        run: |
+          mkdir ${{ matrix.target }}
+          case "$RUNNER_OS" in
+            "Linux")
+              SHLIB=librure.so
+              ;;
+            "macOS")
+              SHLIB=librure.dylib
+              ;;
+            "Windows")
+              SHLIB=rure.dll
+              ;;
+          esac
+          cp regex/target/${{ matrix.target }}/release/${SHLIB} ${{ matrix.target }}/
+        shell: bash
+
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifact-${{ matrix.target }}
+          path: ${{ matrix.target }}
