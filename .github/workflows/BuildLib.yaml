@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  buildLibs:
+  build:
     strategy:
       matrix:
         include:
@@ -66,8 +66,8 @@ jobs:
             CARGO=cargo
             rustup target add ${{ matrix.target }}
           fi
-          cd regex/regex-capi
           ${CARGO} build --release --target ${{ matrix.target }}
+        working-directory: regex/regex-capi
         shell: bash
 
       - name: Make artifacts
@@ -90,5 +90,27 @@ jobs:
       - name: Publish artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: artifact-${{ matrix.target }}
+          name: ${{ matrix.target }}
           path: ${{ matrix.target }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: librure
+
+      - name: Make archive
+        run: tar czvf librure.tar.gz ./librure
+
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: librure.tar.gz
+          path: librure.tar.gz
