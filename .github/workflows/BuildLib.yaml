@@ -8,7 +8,24 @@ jobs:
   buildLibs:
     strategy:
       matrix:
-        os: [ubuntu-20.04, windows-2022, macos-12]
+        include:
+          - os: ubuntu-20.04
+            target: i686-unknown-linux-gnu
+
+          - os: ubuntu-20.04
+            target: x86_64-unknown-linux-gnu
+
+          - os: macos-12
+            target: aarch64-apple-darwin
+
+          - os: macos-12
+            target: x86_64-apple-darwin
+
+          - os: windows-2022
+            target: i686-pc-windows-msvc
+
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.os }}
 
@@ -43,20 +60,12 @@ jobs:
           cd regex/regex-capi
           case "$RUNNER_OS" in
             "Linux")
-              TARGETS="i686-unknown-linux-gnu x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu"
               CARGO=cross
               ;;
-            "macOS")
-              TARGETS="aarch64-apple-darwin x86_64-apple-darwin"
-              CARGO=cargo
-              ;;
-            "Windows")
-              TARGETS="i686-pc-windows-msvc x86_64-pc-windows-msvc"
-              CARGO=cargo
-              ;;
             *)
+              CARGO=cargo
+              rustup target add ${{ matrix.target }}
               ;;
           esac
-          echo ${TARGETS} | xargs -d ' ' -P1 -I{} ${CARGO} build --release --target {}
-          echo "All done"
+          ${CARGO} build --release --target ${{ matrix.target }}
         shell: bash
