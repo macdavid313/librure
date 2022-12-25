@@ -18,6 +18,12 @@ jobs:
           - os: ubuntu-20.04
             target: aarch64-unknown-linux-gnu
 
+          - os: ubuntu-20.04
+            target: sparcv9-sun-solaris
+
+          - os: ubuntu-20.04
+            target: x86_64-pc-solaris
+
           - os: macos-12
             target: aarch64-apple-darwin
 
@@ -31,9 +37,6 @@ jobs:
             target: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.os }}
-
-    env:
-      RURE_VERSION: 1.7.0
 
     steps:
       - name: Checkout
@@ -49,13 +52,17 @@ jobs:
           toolchain: stable
 
       - name: Install cross
-        uses: baptiste0928/cargo-install@v1
+        if: matrix.os == 'ubuntu-20.04'
+        uses: actions-rs/install@v0.1
         with:
           crate: cross
+          version: 0.2.4
+          use-tool-cache: true
 
       - name: Set up regexp repo
         run: |
-          git clone -b ${RURE_VERSION} https://github.com/rust-lang/regex.git
+          curl -L https://github.com/rust-lang/regex/archive/f871a8e.tar.gz | tar xz
+          mv regex-* regex
         shell: bash
 
       - name: Build librure shared library
@@ -64,8 +71,8 @@ jobs:
             CARGO=cross
           else
             CARGO=cargo
-            rustup target add ${{ matrix.target }}
           fi
+          rustup target add ${{ matrix.target }}
           ${CARGO} build --release --target ${{ matrix.target }}
         working-directory: regex/regex-capi
         shell: bash
