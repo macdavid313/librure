@@ -18,6 +18,9 @@ jobs:
           - os: ubuntu-20.04
             target: aarch64-unknown-linux-gnu
 
+          - os: ubuntu-20.04
+            target: x86_64-sun-solaris
+
           - os: macos-12
             target: aarch64-apple-darwin
 
@@ -107,11 +110,8 @@ jobs:
         with:
           path: librure
 
-      - name: Make archive
-        run: tar czvf librure.tar.gz ./librure
-
       - name: Publish artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: librure.tar.gz
-          path: librure.tar.gz
+          name: librure
+          path: librure
