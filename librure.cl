@@ -298,14 +298,12 @@
     (when (= (svref index-map i) byte-index)
       (return-from to-char-index i))))
 
-;; (defmacro with-rure-captures ((rure var length-var) &body)
-;;   `(let ((,var (rure_captures_new (& ,rure))))
-;;      (when (zerop ,var)
-;;        (error "rure_captures_new returned NULL"))
-
-;;      (unwind-protect )
-;;      )
-;;   )
+(defmacro with-rure-captures ((rure var) &body body)
+  `(let ((,var (rure_captures_new (& ,rure))))
+     (when (zerop ,var)
+       (error "rure_captures_new returned NULL"))
+     (unwind-protect (progn ,@body)
+       (rure_captures_free ,var))))
 
 ;;; High-level APIs
 (defstruct (rure (:constructor %make-rure))
