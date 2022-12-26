@@ -226,13 +226,13 @@
   :call-direct t)
 
 ;;; misc
-(def-foreign-call rure_escape_must ((pattern (* :char)))
-  :returning ((* :char))
+(def-foreign-call rure_escape_must ((pattern :foreign-address))
+  :returning :foreign-address
   :strings-convert nil
   :arg-checking nil
   :call-direct t)
 
-(def-foreign-call rure_cstring_free ((s (* :char)))
+(def-foreign-call rure_cstring_free ((s :foreign-address))
   :returning :void
   :strings-convert nil
   :arg-checking nil
@@ -297,6 +297,15 @@
       ((= i len) len)
     (when (= (svref index-map i) byte-index)
       (return-from to-char-index i))))
+
+;; (defmacro with-rure-captures ((rure var length-var) &body)
+;;   `(let ((,var (rure_captures_new (& ,rure))))
+;;      (when (zerop ,var)
+;;        (error "rure_captures_new returned NULL"))
+
+;;      (unwind-protect )
+;;      )
+;;   )
 
 ;;; High-level APIs
 (defstruct (rure (:constructor %make-rure))
@@ -386,3 +395,14 @@
           (:index (let ((index-map (make-index-map input)))
                     (values t (cons (to-char-index index-map start)
                                     (to-char-index index-map end))))))))))
+
+(defun quote-rure (str)
+  (check-type str string)
+  (with-native-string (pattern str :external-format :utf8)
+    (let ((ptr (rure_escape_must pattern))
+          quoted)
+      (when (zerop ptr)
+        (error "rure_escape_must returned NULL"))
+      (setq quoted (native-to-string ptr :external-format :utf8))
+      (rure_cstring_free ptr)
+      quoted)))
