@@ -226,13 +226,13 @@
   :call-direct t)
 
 ;;; misc
-(def-foreign-call rure_escape_must ((pattern (* :char)))
-  :returning ((* :char))
+(def-foreign-call rure_escape_must ((pattern :foreign-address))
+  :returning :foreign-address
   :strings-convert nil
   :arg-checking nil
   :call-direct t)
 
-(def-foreign-call rure_cstring_free ((s (* :char)))
+(def-foreign-call rure_cstring_free ((s :foreign-address))
   :returning :void
   :strings-convert nil
   :arg-checking nil
@@ -246,6 +246,18 @@
 ;;; Utilities
 (defmacro & (thing)
   `(slot-value ,thing 'ptr))
+
+(defmacro with-rure-error ((var) &body body)
+  `(let ((,var (rure_error_new)))
+     (unwind-protect (progn ,@body)
+       (rure_error_free ,var))))
+
+(defun lisp-string-to-haystack (str &optional (start 0) (end (length str)))
+  (check-type str string)
+  (string-to-octets str :start start
+                        :end end
+                        :null-terminate nil
+                        :external-format :utf8))
 
 (defmacro with-stack-rure-match ((var start-var end-var &optional (allocation :foreign)) &body body)
   `(with-stack-fobjects ((,var 'rure_match :allocation ,allocation))
@@ -274,17 +286,24 @@
                           (t (error "Cannot get byte index for ~s" str))))
           (incf i 1))))))
 
-(defun utf8-index-to-byte-index (index-map index)
+(defun to-byte-index (index-map char-index)
   (declare (type simple-vector index-map))
-  (svref index-map index))
+  (svref index-map char-index))
 
-(defun byte-index-to-utf8-index (index-map index)
+(defun to-char-index (index-map byte-index)
   (declare (type simple-vector index-map))
   (do ((i 0 (+ i 1))
        (len (length index-map)))
       ((= i len) len)
-    (when (= (svref index-map i) index)
-      (return-from byte-index-to-utf8-index i))))
+    (when (= (svref index-map i) byte-index)
+      (return-from to-char-index i))))
+
+(defmacro with-rure-captures ((rure var) &body body)
+  `(let ((,var (rure_captures_new (& ,rure))))
+     (when (zerop ,var)
+       (error "rure_captures_new returned NULL"))
+     (unwind-protect (progn ,@body)
+       (rure_captures_free ,var))))
 
 ;;; High-level APIs
 (defstruct (rure (:constructor %make-rure))
@@ -296,18 +315,6 @@
 (defun finalize-rure (rure)
   (declare (type rure rure))
   (rure_free (& rure)))
-
-(defmacro with-rure-error ((var) &body body)
-  `(let ((,var (rure_error_new)))
-     (unwind-protect (progn ,@body)
-       (rure_error_free ,var))))
-
-(defun lisp-string-to-haystack (str &optional (start 0) (end (length str)))
-  (check-type str string)
-  (string-to-octets str :start start
-                        :end end
-                        :null-terminate nil
-                        :external-format :utf8))
 
 (defun make-rure (pattern case-fold ignore-whitespace multiple-lines single-line return)
   (flet ((flag-to-value (flag)
@@ -384,6 +391,16 @@
         (ecase return
           (:string (values t (octets-to-string (subseq haystack start end))))
           (:index (let ((index-map (make-index-map input)))
-                    (values t (cons (byte-index-to-utf8-index index-map start)
-                                    (byte-index-to-utf8-index index-map end))))))))
-    (rure-find rure input start end return)))
+                    (values t (cons (to-char-index index-map start)
+                                    (to-char-index index-map end))))))))))
+
+(defun quote-rure (str)
+  (check-type str string)
+  (with-native-string (pattern str :external-format :utf8)
+    (let ((ptr (rure_escape_must pattern))
+          quoted)
+      (when (zerop ptr)
+        (error "rure_escape_must returned NULL"))
+      (setq quoted (native-to-string ptr :external-format :utf8))
+      (rure_cstring_free ptr)
+      quoted)))
